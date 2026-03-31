@@ -9,26 +9,47 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 // Parse JSON bodies
 app.use(express.json());
 
-// Temporary storage for equipment data
+// Temporary storage
 let equipment = [];
 
 // GET data for frontend
 app.get("/data", (req, res) => {
-  console.log("Sending data to frontend:", equipment); // log to console
+  console.log("Sending data:", equipment);
   res.json(equipment);
 });
 
-// POST data from ESP32
+// POST = create OR update
 app.post("/data", (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).json({ status: "error", message: "No data received" });
   }
 
-  console.log("Received from ESP32:", req.body);
-  equipment.push(req.body); // store incoming data
+  const incoming = req.body;
+
+  console.log("Received:", incoming);
+
+  // 🔍 Find existing item by ID
+  const index = equipment.findIndex(item => item.id === incoming.id);
+
+  if (index !== -1) {
+    // 🔄 UPDATE existing
+    equipment[index] = {
+      ...equipment[index],
+      ...incoming,
+      lastUpdated: new Date()
+    };
+  } else {
+    // ➕ CREATE new
+    equipment.push({
+      ...incoming,
+      lastUpdated: new Date()
+    });
+  }
+
   res.json({ status: "ok" });
 });
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+// Allow ESP32 access (IMPORTANT)
+app.listen(3000, "0.0.0.0", () => {
+  console.log("Server running on http://0.0.0.0:3000");
 });
